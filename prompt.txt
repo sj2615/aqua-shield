@@ -1,0 +1,985 @@
+# AGRI-SENSE — CRITICAL COMMUNICATION ARCHITECTURE UPDATE
+
+IMPORTANT:
+
+Update the existing AGRI-SENSE implementation plan.
+
+Do NOT rebuild the project from scratch.
+
+The previous implementation plan assumed Python would communicate with the ESP32 over Wi-Fi/HTTP.
+
+THAT IS NO LONGER THE ARCHITECTURE.
+
+The final communication architecture is:
+
+LAPTOP 1 → WIRED USB SERIAL → ESP32 → WIRELESS WI-FI → LAPTOP 2
+
+Python remains the backbone of Laptop 1.
+
+React remains the frontend of Laptop 1.
+
+ESP32 performs the intelligence.
+
+Laptop 2 receives the processed ESP32 result wirelessly.
+
+============================================================
+1. FINAL SYSTEM ARCHITECTURE
+============================================================
+
+The final system must be:
+
+                         LAPTOP 1
+              ┌─────────────────────────┐
+              │                         │
+              │ React / Vite Frontend   │
+              │          │              │
+              │          ▼              │
+              │ Python FastAPI Backend  │
+              │          │              │
+              │          ▼              │
+              │ USB Serial Client       │
+              │          │              │
+              └──────────┼──────────────┘
+                         │
+                         │ WIRED
+                         │ USB SERIAL
+                         ▼
+                    ┌─────────┐
+                    │  ESP32   │
+                    │          │
+                    │ Parser   │
+                    │ Validate │
+                    │ Detect   │
+                    │ Estimate │
+                    │ Confidence│
+                    │ Decision │
+                    └────┬─────┘
+                         │
+                         │ WI-FI
+                         ▼
+                    ┌─────────┐
+                    │ LAPTOP 2│
+                    │Dashboard│
+                    └─────────┘
+
+This architecture is authoritative.
+
+Do NOT replace USB Serial between Laptop 1 and ESP32 with Wi-Fi.
+
+Do NOT make Laptop 1 communicate directly with Laptop 2.
+
+Do NOT make React communicate directly with ESP32.
+
+The communication path must remain:
+
+React
+  ↓
+Python FastAPI
+  ↓
+USB Serial
+  ↓
+ESP32
+  ↓
+Wi-Fi
+  ↓
+Laptop 2 Dashboard
+
+============================================================
+2. RESPONSIBILITY OF LAPTOP 1
+============================================================
+
+Laptop 1 owns:
+
+- field simulation
+- ground truth
+- observed sensor values
+- environment
+- scenario injection
+- packet generation
+- USB serial transmission
+- serial communication status
+- local development/debugging
+
+Laptop 1 does NOT own:
+
+- fault detection
+- sensor health classification
+- confidence
+- state estimation
+- irrigation decision
+
+Those belong to ESP32.
+
+============================================================
+3. RESPONSIBILITY OF ESP32
+============================================================
+
+ESP32 owns:
+
+1. receiving the packet
+2. serial parsing
+3. packet validation
+4. range validation
+5. freshness validation
+6. sensor health analysis
+7. fault detection
+8. state estimation
+9. confidence calculation
+10. irrigation decision
+11. Wi-Fi communication to Laptop 2
+
+ESP32 is the intelligence layer.
+
+============================================================
+4. RESPONSIBILITY OF LAPTOP 2
+============================================================
+
+Laptop 2 owns visualization only.
+
+It receives processed ESP32 information over Wi-Fi.
+
+Laptop 2 must NOT independently calculate:
+
+- fault detection
+- confidence
+- state estimation
+- irrigation decision
+
+It only visualizes the results received from ESP32.
+
+============================================================
+5. PYTHON BACKEND COMMUNICATION CHANGE
+============================================================
+
+Remove the previous HTTP-based ESP32 client architecture.
+
+Do NOT use:
+
+httpx → ESP32
+
+Do NOT use:
+
+requests → ESP32
+
+Do NOT use:
+
+Wi-Fi HTTP from Laptop 1 to ESP32.
+
+Instead create:
+
+backend/app/communication/serial_client.py
+
+Use a Python serial library such as:
+
+pyserial
+
+Add:
+
+pyserial
+
+to requirements.txt.
+
+============================================================
+6. SERIAL COMMUNICATION
+============================================================
+
+Python FastAPI must communicate with ESP32 through USB serial.
+
+Example:
+
+COM5
+
+Baud:
+
+115200
+
+However:
+
+DO NOT hard-code COM5.
+
+The serial configuration must be changeable.
+
+Configuration:
+
+SERIAL_PORT=COM5
+SERIAL_BAUDRATE=115200
+SERIAL_TIMEOUT=2
+
+These should be defaults only.
+
+============================================================
+7. SERIAL CONFIGURATION API
+============================================================
+
+Add:
+
+POST /api/serial/config
+
+Example:
+
+{
+    "port": "COM5",
+    "baudrate": 115200,
+    "timeout": 2
+}
+
+Also add:
+
+GET /api/serial/status
+
+Return:
+
+{
+    "status": "CONNECTED",
+    "port": "COM5",
+    "baudrate": 115200,
+    "last_error": null
+}
+
+Possible states:
+
+DISCONNECTED
+CONNECTING
+CONNECTED
+ERROR
+TIMEOUT
+
+============================================================
+8. SERIAL SEND API
+============================================================
+
+Add:
+
+POST /api/esp32/send
+
+The behavior must now be:
+
+1. Get current simulation state.
+2. Generate canonical packet.
+3. Serialize packet to JSON.
+4. Add a newline delimiter.
+5. Send JSON over USB serial.
+6. Log transmission.
+7. Return transmission status.
+
+Example transmitted serial line:
+
+{"timestamp":125,"rainfall_mm":0,"zones":[...]}
+
+followed by:
+
+\n
+
+The ESP32 should therefore be able to read one complete packet at a time.
+
+============================================================
+9. SERIAL PACKET FRAMING
+============================================================
+
+Use newline-delimited JSON.
+
+Every packet sent from Python to ESP32 must be:
+
+ONE JSON OBJECT
+
+followed by:
+
+NEWLINE
+
+Example:
+
+{
+    "timestamp": 125,
+    "rainfall_mm": 0,
+    "zones": [...]
+}\n
+
+This provides a simple packet boundary.
+
+Do not send arbitrary Python repr() output.
+
+Do not send:
+
+str(dictionary)
+
+Use valid JSON serialization.
+
+============================================================
+10. ESP32 RESPONSE PATH
+============================================================
+
+IMPORTANT:
+
+The ESP32's processed result does NOT need to return to Laptop 1.
+
+The primary production path is:
+
+ESP32
+  ↓
+Wi-Fi
+  ↓
+Laptop 2
+
+Therefore Laptop 1 should NOT depend on receiving the ESP32 intelligence result.
+
+Laptop 1 only needs to confirm:
+
+PACKET SENT
+
+and optionally:
+
+SERIAL TRANSMISSION SUCCESS
+
+============================================================
+11. LAPTOP 1 RESPONSE VIEWER CHANGE
+============================================================
+
+The current UI contains:
+
+"ESP32 INTELLIGENCE RESULT"
+
+This should NOT imply that Laptop 1 is receiving the final intelligence result from ESP32.
+
+Change this section to:
+
+"SERIAL TRANSMISSION"
+
+Show:
+
+PACKET READY
+PACKET SENT
+SERIAL ERROR
+SERIAL TIMEOUT
+
+Example:
+
+ESP32 SERIAL LINK
+
+● CONNECTED
+
+COM5
+115200 baud
+
+Last packet:
+Update #125
+
+Status:
+SENT ✓
+
+The actual intelligence result belongs to Laptop 2.
+
+============================================================
+12. COMMUNICATION PANEL UPDATE
+============================================================
+
+The Laptop 1 communication panel should show:
+
+LAPTOP 1
+   ↓
+Python Backend
+   ↓
+USB Serial
+   ↓
+ESP32
+
+Example log:
+
+[15:03:05] Packet generated
+[15:03:05] Sending packet to ESP32
+[15:03:05] 1,024 bytes transmitted
+[15:03:05] Packet sent successfully
+
+Do not show:
+
+"ESP32 response received"
+
+unless a separate debug response channel is explicitly implemented.
+
+============================================================
+13. FARM PACKET FLOW
+============================================================
+
+The exact flow should be:
+
+Environment
+    ↓
+Python Simulation
+    ↓
+Ground Truth
+    ↓
+Observation
+    ↓
+Scenario Injection
+    ↓
+Packet Generator
+    ↓
+JSON Packet
+    ↓
+USB Serial
+    ↓
+ESP32
+
+The ESP32 then performs:
+
+JSON
+ ↓
+Parser
+ ↓
+Validation
+ ↓
+Sensor Health
+ ↓
+Fault Detection
+ ↓
+State Estimation
+ ↓
+Confidence
+ ↓
+Irrigation Decision
+ ↓
+Wi-Fi
+ ↓
+Laptop 2
+
+============================================================
+14. ARDUINO IDE SERIAL MONITOR
+============================================================
+
+IMPORTANT:
+
+The ESP32 must support debug output through Arduino Serial.
+
+Friend B should include debug statements such as:
+
+Serial.begin(115200);
+
+Example debug output:
+
+=================================
+       AGRI-SENSE ESP32
+=================================
+
+Packet received
+Timestamp: 125
+
+Z01
+S01 = 42%
+S02 = 44%
+S03 = 90%
+
+Running sensor validation...
+
+S01 -> HEALTHY
+S02 -> HEALTHY
+S03 -> OUTLIER
+
+Estimated Moisture: 43.4%
+Confidence: 0.94
+
+Irrigation Decision:
+Z01 -> OFF
+
+Result sent to dashboard.
+
+The exact intelligence output depends on Friend B's implementation.
+
+============================================================
+15. ARDUINO SERIAL MONITOR WARNING
+============================================================
+
+IMPORTANT:
+
+Do NOT assume Python and Arduino IDE can simultaneously open the same COM port.
+
+If Python owns:
+
+COM5
+
+Arduino IDE's Serial Monitor generally cannot also open COM5 at the same time.
+
+Therefore support two development modes.
+
+MODE A:
+
+Python owns COM5.
+
+Arduino IDE Serial Monitor is closed.
+
+This is the normal integrated operation.
+
+MODE B:
+
+Stop Python serial communication.
+
+Open Arduino IDE Serial Monitor.
+
+Use it to inspect ESP32 debug output.
+
+============================================================
+16. OPTIONAL DUAL-SERIAL DEBUG MODE
+============================================================
+
+If simultaneous Python communication and Arduino Serial Monitor debugging is required:
+
+use separate serial interfaces.
+
+For example:
+
+Laptop 1
+   │
+   │ USB-UART
+   ▼
+ESP32 UART1
+
+AND
+
+Arduino IDE
+   │
+   │ USB
+   ▼
+ESP32 native USB / separate debug interface
+
+This is OPTIONAL.
+
+Do not complicate the first working version.
+
+The default implementation should use one reliable serial path first.
+
+============================================================
+17. ESP32 SERIAL DEBUG FORMAT
+============================================================
+
+Friend B should print useful debug information.
+
+At minimum:
+
+SYSTEM START
+
+Wi-Fi CONNECTED
+
+DASHBOARD IP / CONNECTION STATUS
+
+PACKET RECEIVED
+
+TIMESTAMP
+
+ZONE DATA
+
+SENSOR VALUES
+
+VALIDATION RESULT
+
+FAULT DETECTION RESULT
+
+ESTIMATED STATE
+
+CONFIDENCE
+
+IRRIGATION DECISION
+
+DASHBOARD TRANSMISSION RESULT
+
+This makes Arduino Serial Monitor useful for debugging.
+
+============================================================
+18. SERIAL TRANSMISSION RELIABILITY
+============================================================
+
+Python serial client must support:
+
+- port open
+- port close
+- reconnect
+- timeout
+- serial exception handling
+- configurable baud rate
+- configurable port
+- transmission logging
+
+If ESP32 is unplugged:
+
+display:
+
+ESP32 SERIAL: DISCONNECTED
+
+Do not crash FastAPI.
+
+============================================================
+19. SERIAL RECONNECTION
+============================================================
+
+If the ESP32 is disconnected:
+
+FastAPI must remain operational.
+
+The simulator must continue working.
+
+Only the ESP32 transmission function should report:
+
+SERIAL DISCONNECTED
+
+When ESP32 is plugged back in:
+
+allow reconnect without restarting the entire simulator.
+
+============================================================
+20. PACKET PREVIEW UI
+============================================================
+
+Keep the existing packet preview.
+
+But change the action:
+
+SEND TO ESP32
+
+to mean:
+
+SEND VIA USB SERIAL
+
+The UI should display:
+
+TRANSPORT:
+
+USB SERIAL
+
+PORT:
+
+COM5
+
+BAUD:
+
+115200
+
+STATUS:
+
+CONNECTED
+
+============================================================
+21. UI COMMUNICATION HEADER
+============================================================
+
+Change the top status indicators.
+
+Instead of:
+
+Controller: CONNECTED
+
+show:
+
+ESP32 SERIAL:
+CONNECTED
+
+or:
+
+ESP32 SERIAL:
+DISCONNECTED
+
+The meaning must be clear.
+
+============================================================
+22. LAPTOP 2 COMMUNICATION
+============================================================
+
+Laptop 2 is independent of Laptop 1.
+
+ESP32 communicates with Laptop 2 using Wi-Fi.
+
+The exact protocol should be finalized by the ESP32/dashboard team.
+
+Possible architecture:
+
+ESP32
+   ↓
+Wi-Fi
+   ↓
+HTTP/WebSocket
+   ↓
+Laptop 2 Dashboard
+
+Do not implement Laptop 1-specific logic into Laptop 2.
+
+============================================================
+23. DO NOT ROUTE LAPTOP 2 THROUGH LAPTOP 1
+============================================================
+
+Avoid:
+
+ESP32
+ ↓
+Laptop 1 Python
+ ↓
+Laptop 2
+
+The production path should be:
+
+ESP32
+ ↓
+Wi-Fi
+ ↓
+Laptop 2
+
+This demonstrates that the ESP32 is independently communicating its intelligence to the monitoring system.
+
+============================================================
+24. SIGNATURE DEMO
+============================================================
+
+The final demo should be:
+
+STEP 1
+
+Laptop 1 starts normal simulation.
+
+STEP 2
+
+Select:
+
+Z01 / S03
+
+STEP 3
+
+Inject:
+
+OUTLIER
+
+Example:
+
+Ground truth:
+
+43%
+
+Observed:
+
+90%
+
+STEP 4
+
+Generate packet.
+
+Laptop 1 displays:
+
+S03 = 90%
+
+STEP 5
+
+Click:
+
+SEND TO ESP32
+
+Python sends JSON through:
+
+USB SERIAL
+
+STEP 6
+
+ESP32 receives packet.
+
+Arduino Serial Monitor can show:
+
+PACKET RECEIVED
+S03 = 90
+
+STEP 7
+
+ESP32 analyzes the packet.
+
+Arduino Serial Monitor:
+
+S03 -> OUTLIER
+
+Estimated = 43%
+
+Confidence = ...
+
+STEP 8
+
+ESP32 sends processed result over:
+
+Wi-Fi
+
+STEP 9
+
+Laptop 2 receives:
+
+S03
+
+FAULT
+
+Reported = 90%
+
+Estimated = 43%
+
+Confidence = ...
+
+STEP 10
+
+Laptop 2 displays the intelligent result.
+
+============================================================
+25. RESPONSIBILITY DEMONSTRATION
+============================================================
+
+The UI and demo should clearly communicate:
+
+LAPTOP 1:
+
+"I generated the abnormal observation."
+
+ESP32:
+
+"I discovered the abnormal observation."
+
+LAPTOP 2:
+
+"I visualized the ESP32 decision."
+
+This is the central system concept.
+
+============================================================
+26. UPDATE IMPLEMENTATION ORDER
+============================================================
+
+Replace the previous ESP32 communication phases with:
+
+PHASE 1
+Python simulation backend.
+
+PHASE 2
+Scenario engine.
+
+PHASE 3
+Canonical packet generator.
+
+PHASE 4
+USB serial client using pyserial.
+
+PHASE 5
+Serial configuration API.
+
+PHASE 6
+Serial transmission testing.
+
+PHASE 7
+ESP32 packet receiver.
+
+PHASE 8
+ESP32 processing.
+
+PHASE 9
+ESP32 Wi-Fi communication.
+
+PHASE 10
+Laptop 2 dashboard.
+
+PHASE 11
+End-to-end integration.
+
+============================================================
+27. FINAL ARCHITECTURE MUST BE
+============================================================
+
+             LAPTOP 1
+        ┌────────────────┐
+        │ React           │
+        │ UI              │
+        └───────┬────────┘
+                │
+                ▼
+        ┌────────────────┐
+        │ Python FastAPI │
+        │ Backbone       │
+        └───────┬────────┘
+                │
+             USB SERIAL
+                │
+                ▼
+        ┌────────────────┐
+        │ ESP32          │
+        │                │
+        │ Validation     │
+        │ Fault Detection│
+        │ Estimation     │
+        │ Confidence     │
+        │ Decision       │
+        └───────┬────────┘
+                │
+              WI-FI
+                │
+                ▼
+        ┌────────────────┐
+        │ LAPTOP 2       │
+        │ Dashboard      │
+        └────────────────┘
+
+Arduino IDE Serial Monitor:
+
+ESP32
+  │
+  └── DEBUG OUTPUT → Arduino Serial Monitor
+
+Arduino Serial Monitor is a DEVELOPMENT/DEBUG TOOL,
+not a production communication layer.
+
+============================================================
+28. DEFINITION OF DONE
+============================================================
+
+The implementation is correct only when:
+
+[ ] React controls the simulator.
+
+[ ] Python owns simulation state.
+
+[ ] Python generates the canonical packet.
+
+[ ] Python sends the packet through USB Serial.
+
+[ ] ESP32 receives the packet.
+
+[ ] ESP32 does its own validation.
+
+[ ] ESP32 detects faults.
+
+[ ] ESP32 performs state estimation.
+
+[ ] ESP32 calculates confidence.
+
+[ ] ESP32 makes irrigation decisions.
+
+[ ] ESP32 sends processed results to Laptop 2 via Wi-Fi.
+
+[ ] Laptop 2 visualizes ESP32 results.
+
+[ ] Arduino IDE can be used to inspect ESP32 debug output.
+
+[ ] Laptop 1 does not perform ESP32 intelligence.
+
+[ ] Laptop 1 does not depend on receiving ESP32 intelligence results.
+
+[ ] Serial disconnection does not crash the simulator.
+
+[ ] Packet framing is reliable.
+
+[ ] The exact JSON contract remains unchanged.
+
+============================================================
+FINAL RULE
+============================================================
+
+The system must demonstrate:
+
+LAPTOP 1 GENERATES THE OBSERVATION.
+
+PYTHON TRANSPORTS IT OVER WIRED SERIAL.
+
+ESP32 DISCOVERS THE PROBLEM.
+
+ESP32 ESTIMATES THE TRUE STATE.
+
+ESP32 MAKES THE DECISION.
+
+ESP32 TRANSMITS THE RESULT WIRELESSLY.
+
+LAPTOP 2 VISUALIZES THE RESULT.
+
+ARDUINO IDE IS USED ONLY TO DEBUG/OBSERVE ESP32 OUTPUT.
