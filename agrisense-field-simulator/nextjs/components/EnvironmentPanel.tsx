@@ -5,6 +5,7 @@ import type { ZoneState } from '@/types/simulation';
 
 interface Props {
   zone: ZoneState | null;
+  zoneId: string;
   rainfall: number;
   onRainfallChange: (v: number) => void;
   onTemperatureChange: (v: number) => void;
@@ -17,6 +18,7 @@ interface CardProps {
   icon: string;
   label: string;
   value: number;
+  controlValue?: number;
   unit: string;
   min: number; max: number; step: number;
   accent: string;
@@ -27,12 +29,10 @@ interface CardProps {
   className?: string;
 }
 
-function SensorCard({ icon, label, value, unit, min, max, step, accent, bg, readOnly, barValue, onChange, className }: CardProps) {
-  const [local, setLocal] = useState(value);
-  const displayVal = readOnly ? value : local;
+function SensorCard({ icon, label, value, controlValue, unit, min, max, step, accent, bg, readOnly, barValue, onChange, className }: CardProps) {
+  const sliderValue = controlValue ?? value;
+  const displayVal = value;
   const pct = ((displayVal - min) / (max - min)) * 100;
-
-  const handle = (v: number) => { setLocal(v); onChange?.(v); };
 
   return (
     <div className={className} style={{ background: bg, borderRadius: 16, padding: '20px', border: '1px solid rgba(255,255,255,0.06)', display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -72,7 +72,7 @@ function SensorCard({ icon, label, value, unit, min, max, step, accent, bg, read
         </div>
       ) : (
         <div style={{ '--thumb-color': accent, '--thumb-shadow': `${accent}80` } as React.CSSProperties}>
-          <input type="range" min={min} max={max} step={step} value={local} onChange={e => handle(Number(e.target.value))} style={{ width: '100%', opacity: onChange === undefined ? 0.5 : 1 }} disabled={onChange === undefined} />
+          <input type="range" min={min} max={max} step={step} value={sliderValue} onChange={e => onChange?.(Number(e.target.value))} style={{ width: '100%', opacity: onChange === undefined ? 0.5 : 1 }} disabled={onChange === undefined} />
           <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4, fontSize: 10, color: '#475569' }}>
             <span>{min}{unit}</span><span>{max}{unit}</span>
           </div>
@@ -89,8 +89,14 @@ function adcToMoisture(adc: number) {
   return Math.round(Math.max(0, Math.min(100, (ADC_DRY - adc) / (ADC_DRY - ADC_WET) * 100)));
 }
 
+interface MoistureSensor {
+  sensor_id: string;
+  adc_value: number;
+  observed_moisture: number;
+}
+
 function VerticalMoistureSlider({ sensor, isLive, onChange }: {
-  sensor: any;
+  sensor: MoistureSensor;
   isLive: boolean;
   onChange: (id: string, adc: number) => void;
 }) {
@@ -108,7 +114,7 @@ function VerticalMoistureSlider({ sensor, isLive, onChange }: {
     onChange(sensor.sensor_id, v);
   };
 
-  const displayAdc   = isLive ? (sensor.adc_value ?? localAdc) : localAdc;
+  const displayAdc = isLive ? sensor.adc_value : localAdc;
   const moisturePct  = adcToMoisture(displayAdc);
 
   return (
@@ -137,8 +143,19 @@ function VerticalMoistureSlider({ sensor, isLive, onChange }: {
   );
 }
 
-export default function EnvironmentPanel({ zone, rainfall, onRainfallChange, onTemperatureChange, onFlowChange, onAdcChange, isLive }: Props) {
-  const sensors = zone ? Object.values(zone.sensors) : [];
+function offlineSensorsForZone(zoneId: string): MoistureSensor[] {
+  const start = (Number(zoneId.slice(-1)) - 1) * 3 + 1;
+  return [0, 1, 2].map(offset => ({
+    sensor_id: `S${String(start + offset).padStart(2, '0')}`,
+    adc_value: 2300,
+    observed_moisture: 50,
+  }));
+}
+
+export default function EnvironmentPanel({ zone, zoneId, rainfall, onRainfallChange, onTemperatureChange, onFlowChange, onAdcChange, isLive }: Props) {
+  // Keep the soil controls usable in frontend-only development. Once the API is
+  // available, its authoritative zone sensors replace these local defaults.
+  const sensors: MoistureSensor[] = zone ? Object.values(zone.sensors) : offlineSensorsForZone(zoneId);
   const avgMoisture = sensors.length > 0 ? sensors.reduce((s, x) => s + x.observed_moisture, 0) / sensors.length : 0;
 
 
@@ -224,17 +241,19 @@ export default function EnvironmentPanel({ zone, rainfall, onRainfallChange, onT
         <SensorCard
           className="temperature-card"
           icon="🌡️" label="Temperature" value={zone?.temperature_c ?? 25} unit="°C"
+          controlValue={zone?.temperature_target_c ?? 25}
           min={0} max={50} step={0.5}
           accent="#f59e0b" bg="linear-gradient(135deg, #1c0a00 0%, #120800 100%)"
-          onChange={isLive ? undefined : onTemperatureChange}
+          onChange={onTemperatureChange}
         />
 
         <SensorCard
           className="irrigation-card"
           icon="💨" label="Irrigation Flow" value={zone?.flow_lpm ?? 0} unit=" L/m"
+          controlValue={zone?.flow_target_lpm ?? 0}
           min={0} max={20} step={0.5}
           accent="#38bdf8" bg="linear-gradient(135deg, #0c1a2e 0%, #071525 100%)"
-          onChange={isLive ? undefined : onFlowChange}
+          onChange={onFlowChange}
         />
       </div>
 
@@ -246,12 +265,11 @@ export default function EnvironmentPanel({ zone, rainfall, onRainfallChange, onT
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
           {[
             { label: 'NO RAIN (0mm)', val: 0, color: '#374151', border: '#4b5563' },
-            { label: 'LIGHT RAIN (2.5 - 15.5 mm)', val: 10, color: '#0e3a5c', border: '#38bdf8' },
-            { label: 'HEAVY RAIN (64.5 - 115.5 mm)', val: 90, color: '#1e1b4b', border: '#818cf8' },
+            { label: 'LIGHT RAIN (3 - 6 mm)', val: 4.5, color: '#0e3a5c', border: '#38bdf8' },
+            { label: 'HEAVY RAIN (15 - 25 mm)', val: 20, color: '#1e1b4b', border: '#818cf8' },
           ].map(p => (
             <button key={p.label} onClick={() => onRainfallChange(p.val)}
-              disabled={isLive}
-              style={{ background: p.color, border: `1px solid ${p.border}`, borderRadius: 10, padding: '10px', color: '#e2e8f0', fontSize: 12, fontWeight: 700, cursor: isLive ? 'not-allowed' : 'pointer', opacity: isLive ? 0.5 : 1, letterSpacing: '0.05em', transition: 'opacity 0.15s' }}>
+              style={{ background: p.color, border: `1px solid ${p.border}`, borderRadius: 10, padding: '10px', color: '#e2e8f0', fontSize: 12, fontWeight: 700, cursor: 'pointer', letterSpacing: '0.05em', transition: 'opacity 0.15s' }}>
               {p.label}
             </button>
           ))}

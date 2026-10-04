@@ -15,19 +15,28 @@ class ScenarioType(str, Enum):
 class SensorState(BaseModel):
     sensor_id: str
     adc_value: int = Field(ge=0, le=4095, default=2300)          # Raw ESP32 analogRead()
-    ground_truth_moisture: float = Field(ge=0, le=100)
+    ground_truth_moisture: float = Field(ge=0, le=100, exclude=True)
     observed_moisture: float = Field(ge=0, le=100)
+    sensor_bias: float = Field(default=0.0, exclude=True)
 
 class ZoneState(BaseModel):
     zone_id: str
     temperature_c: float
+    observed_temperature_c: float = Field(default=27.0, ge=0, le=60)
+    temperature_target_c: float = Field(default=27.0, ge=0, le=60)
     flow_lpm: float = Field(ge=0)
+    flow_target_lpm: float = Field(default=0.0, ge=0, le=20)
     sensors: Dict[str, SensorState]
+    true_moisture: float = Field(default=50.0, ge=0, le=100, exclude=True)
+    retention: float = Field(default=0.9, exclude=True)
+    drainage_factor: float = Field(default=0.06, exclude=True)
+    temperature_offset_c: float = Field(default=0.0, exclude=True)
 
 class SimulationState(BaseModel):
     update_counter: int = 0
     simulation_time: int = 0
     rainfall_mm: float = Field(ge=0, default=0.0)
+    rainfall_target_mm: float = Field(default=0.0, ge=0, le=25, exclude=True)
     zones: Dict[str, ZoneState]
 
 class ActiveScenario(BaseModel):

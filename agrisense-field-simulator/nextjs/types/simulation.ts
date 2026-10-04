@@ -12,7 +12,10 @@ export interface SensorState {
 export interface ZoneState {
   zone_id: string;
   temperature_c: number;
+  observed_temperature_c: number;
+  temperature_target_c: number;
   flow_lpm: number;
+  flow_target_lpm: number;
   sensors: Record<string, SensorState>;
 }
 

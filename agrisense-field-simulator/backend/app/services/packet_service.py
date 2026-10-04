@@ -24,7 +24,7 @@ def generate_packet(state: ApplicationState) -> SimulationPacket:
             
         zones_data.append(ZoneData(
             zone_id=zone_id,
-            temperature_c=zone_state.temperature_c,
+            temperature_c=zone_state.observed_temperature_c,
             flow_lpm=zone_state.flow_lpm,
             sensors=sensors_data
         ))

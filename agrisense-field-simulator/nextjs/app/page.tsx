@@ -193,8 +193,8 @@ export default function Dashboard() {
           <div className="flex-1 flex flex-col gap-5" style={{ minWidth: 0 }}>
             <EnvironmentPanel
               zone={zone}
+              zoneId={activeZone}
               rainfall={rainfall}
-              mode={state?.mode ?? 'PAUSED'}
               onRainfallChange={updateRainfall}
               onTemperatureChange={updateTemperature}
               onFlowChange={updateFlow}

@@ -13,7 +13,7 @@ def apply_scenario(cmd: ScenarioCommand):
     
     if zone_id not in app_state.simulation.zones:
         raise HTTPException(status_code=400, detail="Invalid zone ID")
-    if sensor_id not in app_state.simulation.zones[zone_id].sensors:
+    if sensor_id not in app_state.simulation.zones[zone_id].sensors and sensor_id != f"T{zone_id[-1]}":
         raise HTTPException(status_code=400, detail="Invalid sensor ID")
         
     active = ActiveScenario(
