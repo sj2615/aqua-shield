@@ -40,6 +40,27 @@ def update_environment(cmd: EnvironmentCommand):
             if z_id in app_state.simulation.zones:
                 app_state.simulation.zones[z_id].flow_lpm = flow
                 
+    if cmd.zone_moisture:
+        for z_id, moisture in cmd.zone_moisture.items():
+            if z_id in app_state.simulation.zones:
+                for sensor in app_state.simulation.zones[z_id].sensors.values():
+                    sensor.ground_truth_moisture = moisture
+                    
+    if cmd.sensor_moisture:
+        for s_id, moisture in cmd.sensor_moisture.items():
+            for z_id, zone in app_state.simulation.zones.items():
+                if s_id in zone.sensors:
+                    zone.sensors[s_id].ground_truth_moisture = moisture
+
+    if cmd.sensor_adc:
+        for s_id, adc_val in cmd.sensor_adc.items():
+            for z_id, zone in app_state.simulation.zones.items():
+                if s_id in zone.sensors:
+                    from app.simulation.engine import adc_to_moisture
+                    zone.sensors[s_id].adc_value = max(0, min(4095, adc_val))
+                    zone.sensors[s_id].ground_truth_moisture = adc_to_moisture(adc_val)
+                    zone.sensors[s_id].observed_moisture = adc_to_moisture(adc_val)
+                
     return {"success": True, "simulation": app_state.simulation}
 
 @router.post("/config")

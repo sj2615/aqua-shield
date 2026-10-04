@@ -4,6 +4,7 @@ export type ConnectionStatus = 'CONFIGURED' | 'CHECKING' | 'CONNECTED' | 'UNREAC
 
 export interface SensorState {
   sensor_id: string;
+  adc_value: number;           // Raw ESP32 analogRead() 0-4095
   ground_truth_moisture: number;
   observed_moisture: number;
 }

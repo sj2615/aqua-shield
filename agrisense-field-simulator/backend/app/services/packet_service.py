@@ -18,6 +18,7 @@ def generate_packet(state: ApplicationState) -> SimulationPacket:
                 
             sensors_data.append(SensorReading(
                 sensor_id=sensor_id,
+                adc_value=sensor_state.adc_value,
                 moisture_percent=round(sensor_state.observed_moisture, 2)
             ))
             

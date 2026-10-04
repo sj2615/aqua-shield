@@ -23,11 +23,11 @@ export default function SimulationControls({ mode, intervalMs, onStep, onStart, 
     <div style={{ background: 'rgba(10,15,26,0.9)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 16, padding: '14px 20px', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
 
       {/* Action buttons */}
-      <button onClick={onStep} disabled={isLive} style={{ ...btn('rgba(6,182,212,0.15)', '#0891b2'), opacity: isLive ? 0.4 : 1, cursor: isLive ? 'not-allowed' : 'pointer', color: '#67e8f9' }}>▶| STEP</button>
+      <button onClick={onStep} disabled={isLive} style={{ ...btn('rgba(6,182,212,0.15)', '#0891b2'), opacity: isLive ? 0.4 : 1, cursor: isLive ? 'not-allowed' : 'pointer', color: '#67e8f9' }}>▶| STOP</button>
 
       {!isLive
         ? <button onClick={onStart} style={{ ...btn('rgba(16,185,129,0.15)', '#059669'), color: '#6ee7b7' }}>▶ START</button>
-        : <button onClick={onStop}  style={{ ...btn('rgba(251,191,36,0.15)', '#d97706'),  color: '#fde68a' }}>⏸ PAUSE</button>
+        : <button onClick={onStop}  style={{ ...btn('rgba(239,68,68,0.15)', '#b91c1c'),  color: '#fca5a5' }}>⏹ STOP</button>
       }
 
       <button onClick={onReset} style={{ ...btn('rgba(239,68,68,0.12)', '#b91c1c'), color: '#fca5a5' }}>↺ RESET</button>
@@ -43,6 +43,17 @@ export default function SimulationControls({ mode, intervalMs, onStep, onStart, 
           {s.label}
         </button>
       ))}
+
+      {/* Divider */}
+      <div style={{ width: 1, height: 28, background: 'rgba(255,255,255,0.08)' }} />
+
+      {/* Sampling */}
+      <span style={{ fontSize: 11, color: '#4b5563', fontWeight: 700, letterSpacing: '0.1em' }}>SAMPLING:</span>
+      <select style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, color: '#94a3b8', padding: '6px 8px', fontSize: 12, outline: 'none' }}>
+        <option>10 sam / 1 min</option>
+        <option>30 sam / 1 min</option>
+        <option>60 sam / 1 min</option>
+      </select>
 
       {isLive && (
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8, color: '#34d399', fontSize: 12, fontWeight: 700 }}>

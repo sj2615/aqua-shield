@@ -1,42 +1,291 @@
 @import "tailwindcss";
 
-/* Slider styles - need pseudo-selectors so must be in CSS */
-input[type=range] {
+/* =========================
+   SELECT / DROPDOWN
+   ========================= */
+
+select {
   -webkit-appearance: none;
   appearance: none;
+  background-color: rgba(15, 23, 42, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  color: #e2e8f0;
+  padding: 7px 32px 7px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  /* Custom chevron arrow */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+}
+
+select:hover {
+  border-color: rgba(124, 58, 237, 0.5);
+}
+
+select:focus {
+  border-color: #7c3aed;
+  box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.2);
+}
+
+select option {
+  background-color: #0f172a;
+  color: #e2e8f0;
+  padding: 8px 12px;
+}
+
+/* =========================
+   RANGE SLIDER
+   ========================= */
+
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+
   width: 100%;
-  height: 4px;
-  border-radius: 2px;
+  height: 6px;
+
+  border-radius: 999px;
   background: #1e293b;
+
   outline: none;
   cursor: pointer;
+
+  /* Make the slider reliably interactive */
+  pointer-events: auto;
+  touch-action: none;
+
+  position: relative;
+  z-index: 10;
 }
-input[type=range]::-webkit-slider-thumb {
+
+/* Chrome / Edge / Safari */
+input[type="range"]::-webkit-slider-thumb {
   -webkit-appearance: none;
-  width: 16px;
-  height: 16px;
+  appearance: none;
+
+  width: 18px;
+  height: 18px;
+
   border-radius: 50%;
-  background: var(--thumb-color, #06b6d4);
-  cursor: pointer;
-  box-shadow: 0 0 8px var(--thumb-shadow, rgba(6,182,212,0.7));
-}
-input[type=range]::-moz-range-thumb {
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: var(--thumb-color, #06b6d4);
   border: none;
+
+  background: var(--thumb-color, #06b6d4);
+
+  cursor: grab;
+
+  box-shadow:
+    0 0 8px var(--thumb-shadow, rgba(6, 182, 212, 0.7));
+
+  pointer-events: auto;
+}
+
+input[type="range"]::-webkit-slider-thumb:active {
+  cursor: grabbing;
+  transform: scale(1.15);
+}
+
+/* Firefox */
+input[type="range"]::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+
+  border-radius: 50%;
+  border: none;
+
+  background: var(--thumb-color, #06b6d4);
+
+  cursor: grab;
+
+  box-shadow:
+    0 0 8px var(--thumb-shadow, rgba(6, 182, 212, 0.7));
+}
+
+input[type="range"]::-moz-range-thumb:active {
+  cursor: grabbing;
+}
+
+/* Firefox track */
+input[type="range"]::-moz-range-track {
+  height: 6px;
+  border-radius: 999px;
+  background: #1e293b;
+}
+
+/* Keyboard focus */
+input[type="range"]:focus-visible {
+  outline: 2px solid var(--thumb-color, #06b6d4);
+  outline-offset: 4px;
+}
+
+
+/* =========================
+   VERTICAL SOIL MOISTURE
+   ========================= */
+
+input[type="range"].vertical-slider {
+  -webkit-appearance: none;
+  appearance: none;
+
+  width: 200px;
+  height: 6px;
+
+  background: #1e293b;
+  border-radius: 999px;
+
   cursor: pointer;
+
+  padding: 10px 0;
+  box-sizing: content-box;
+
+  background-clip: content-box;
+
+  pointer-events: auto;
+  touch-action: none;
+
+  position: relative;
+  z-index: 20;
 }
 
-/* Scrollbar */
-::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: #0a0f1a; }
-::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 3px; }
+/* Chrome / Edge / Safari */
+input[type="range"].vertical-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
 
-/* Glow pulse */
+  width: 18px;
+  height: 18px;
+
+  border-radius: 50%;
+  border: none;
+
+  background: var(--thumb-color, #10b981);
+
+  cursor: grab;
+
+  box-shadow:
+    0 0 10px var(--thumb-shadow, rgba(16, 185, 129, 0.7));
+
+  pointer-events: auto;
+}
+
+input[type="range"].vertical-slider::-webkit-slider-thumb:active {
+  cursor: grabbing;
+  transform: scale(1.2);
+}
+
+/* Firefox */
+input[type="range"].vertical-slider::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+
+  border-radius: 50%;
+  border: none;
+
+  background: var(--thumb-color, #10b981);
+
+  cursor: grab;
+
+  box-shadow:
+    0 0 10px var(--thumb-shadow, rgba(16, 185, 129, 0.7));
+}
+
+input[type="range"].vertical-slider::-moz-range-track {
+  width: 6px;
+  height: 6px;
+
+  background: #1e293b;
+  border-radius: 999px;
+}
+
+
+/* =========================
+   DASHBOARD LAYOUT
+   ========================= */
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 20px;
+}
+
+/* Large Soil Moisture panel */
+.soil-moisture-card {
+  grid-column: 1;
+  grid-row: 1 / 3;
+}
+
+/* Smaller Temperature panel */
+.temperature-card {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+/* Irrigation beside/below Temperature */
+.irrigation-card {
+  grid-column: 2;
+  grid-row: 2;
+}
+
+
+/* =========================
+   RESPONSIVE
+   ========================= */
+
+@media (max-width: 900px) {
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto;
+  }
+
+  .soil-moisture-card,
+  .temperature-card,
+  .irrigation-card {
+    grid-column: 1;
+    grid-row: auto;
+  }
+}
+
+
+/* =========================
+   SCROLLBAR
+   ========================= */
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0a0f1a;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #1e293b;
+  border-radius: 3px;
+}
+
+
+/* =========================
+   GLOW PULSE
+   ========================= */
+
 @keyframes glow-pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.4; }
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.4;
+  }
 }
-.glow-dot { animation: glow-pulse 2s ease-in-out infinite; }
+
+.glow-dot {
+  animation: glow-pulse 2s ease-in-out infinite;
+}

@@ -109,6 +109,10 @@ export default function Dashboard() {
     try { await api.updateEnvironment({ zone_flows: { [activeZone]: v } }); } catch { /* ignore */ }
   };
 
+  const updateAdcValue = async (sensorId: string, adc: number) => {
+    try { await api.updateEnvironment({ sensor_adc: { [sensorId]: adc } }); } catch { /* ignore */ }
+  };
+
   // ─── Scenarios ───────────────────────────────────────────────────
   const applyScenario = async (type: ScenarioType, sensor: string, params: Record<string, unknown>) => {
     try {
@@ -185,14 +189,24 @@ export default function Dashboard() {
 
         {/* Main two-column layout — mirrors reference image */}
         <div className="flex gap-5" style={{ minHeight: '520px' }}>
-          {/* Left: Environment */}
-          <div className="flex-1" style={{ minWidth: 0 }}>
+          {/* Left: Environment + Zone Map */}
+          <div className="flex-1 flex flex-col gap-5" style={{ minWidth: 0 }}>
             <EnvironmentPanel
               zone={zone}
               rainfall={rainfall}
+              mode={state?.mode ?? 'PAUSED'}
               onRainfallChange={updateRainfall}
               onTemperatureChange={updateTemperature}
               onFlowChange={updateFlow}
+              onAdcChange={updateAdcValue}
+              isLive={state?.mode === 'LIVE'}
+            />
+            
+            <ZoneMap
+              zones={state?.simulation.zones ?? {}}
+              activeScenarios={state?.scenario.active_scenarios ?? {}}
+              selectedZone={activeZone}
+              onSelectZone={setActiveZone}
             />
           </div>
 
@@ -207,17 +221,8 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Bottom: Zone map + Packet + Communication */}
+        {/* Bottom: Packet + Communication */}
         <div className="grid grid-cols-12 gap-5">
-          {/* Zone Map — full width */}
-          <div className="col-span-12">
-            <ZoneMap
-              zones={state?.simulation.zones ?? {}}
-              activeScenarios={state?.scenario.active_scenarios ?? {}}
-              selectedZone={activeZone}
-              onSelectZone={setActiveZone}
-            />
-          </div>
 
           {/* Packet Viewer */}
           <div className="col-span-7" style={{ minHeight: '320px' }}>

@@ -14,6 +14,7 @@ class ScenarioType(str, Enum):
 
 class SensorState(BaseModel):
     sensor_id: str
+    adc_value: int = Field(ge=0, le=4095, default=2300)          # Raw ESP32 analogRead()
     ground_truth_moisture: float = Field(ge=0, le=100)
     observed_moisture: float = Field(ge=0, le=100)
 

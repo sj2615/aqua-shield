@@ -13,7 +13,7 @@ export const api = {
   stopSimulation:  () => client.post('/simulation/config', { mode: 'PAUSED', interval_ms: 1000 }).then(r => r.data),
   setSimConfig:    (mode: SimulationMode, interval_ms: number) => client.post('/simulation/config', { mode, interval_ms }).then(r => r.data),
 
-  updateEnvironment: (data: { rainfall_mm?: number; zone_temperatures?: Record<string,number>; zone_flows?: Record<string,number> }) =>
+  updateEnvironment: (data: { rainfall_mm?: number; zone_temperatures?: Record<string,number>; zone_flows?: Record<string,number>; zone_moisture?: Record<string,number>; sensor_moisture?: Record<string,number>; sensor_adc?: Record<string,number> }) =>
     client.post('/simulation/environment', data).then(r => r.data),
 
   applyScenario: (data: {

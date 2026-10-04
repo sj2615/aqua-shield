@@ -39,11 +39,14 @@ function Toggle({ on, onClick }: { on: boolean; onClick: () => void }) {
 }
 
 export default function FaultInjectionPanel({ activeZone, activeScenarios, onApply, onReset }: Props) {
-  const sensors = ZONE_SENSORS[activeZone] ?? [];
+  const [sensorType, setSensorType] = useState<'moisture' | 'temperature'>('moisture');
+  const moistureSensors = ZONE_SENSORS[activeZone] ?? [];
+  const tempSensor = `T${activeZone.replace('Z', '')}`;
+  const sensors = sensorType === 'moisture' ? moistureSensors : [tempSensor];
   const [selectedSensor, setSelectedSensor] = useState(sensors[0]);
   const [params, setParams] = useState<Record<string, number>>({ OUTLIER: 90, STUCK: 0, DRIFT: 1.5, MISSING: 0, NOISE: 5, BIAS: 10, SUDDEN_JUMP: 35, NORMAL: 0 });
 
-  const currSensor = selectedSensor || sensors[0];
+  const currSensor = sensors.includes(selectedSensor) ? selectedSensor : sensors[0];
   const isActive = (type: ScenarioType) => Object.values(activeScenarios).some(s => s.scenario_type === type && s.target_sensor === currSensor);
 
   const toggle = (s: Scenario) => {
@@ -66,6 +69,14 @@ export default function FaultInjectionPanel({ activeZone, activeScenarios, onApp
 
       {/* Sensor selector */}
       <div>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+          <select value={sensorType} onChange={e => setSensorType(e.target.value as any)}
+            style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, color: '#e2e8f0', padding: '6px 8px', fontSize: 12, outline: 'none', cursor: 'pointer' }}>
+            <option value="moisture">Soil Moisture Sensor</option>
+            <option value="temperature">Temperature Sensor</option>
+          </select>
+        </div>
+
         <div style={{ fontSize: 10, color: '#6b7280', fontWeight: 700, letterSpacing: '0.12em', marginBottom: 8 }}>TARGET SENSOR</div>
         <div style={{ display: 'flex', gap: 8 }}>
           {sensors.map(s => (

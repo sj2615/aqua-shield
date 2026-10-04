@@ -6,6 +6,9 @@ class EnvironmentCommand(BaseModel):
     rainfall_mm: Optional[float] = Field(None, ge=0)
     zone_temperatures: Optional[Dict[str, float]] = None
     zone_flows: Optional[Dict[str, float]] = None
+    zone_moisture: Optional[Dict[str, float]] = None
+    sensor_moisture: Optional[Dict[str, float]] = None
+    sensor_adc: Optional[Dict[str, int]] = None   # raw ADC per sensor
 
 class ScenarioCommand(BaseModel):
     target_zone: str
